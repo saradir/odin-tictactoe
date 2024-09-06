@@ -7,7 +7,7 @@ function createPlayer(playerName, playerToken) {
     const token = playerToken;
     const getPlayerName = () => playerName;
     const getToken = () => token;
-    const setPlayerName = (playerName) => playerName = playerName;
+    const setPlayerName = (playerName) => this.playerName = playerName;
 
     return { getPlayerName, getToken, setPlayerName };
 }
@@ -37,11 +37,12 @@ const Gameboard = (() => {
     const handleMove = (move, player) => {
         move = move.split('');
 
+        // check if move is legal
         if (board[move[0]][move[1]] != '_') {
-            console.log('Choose an empty cell');
-            return;
+            return false;
         }
         board[move[0]][move[1]] = player.getToken();
+        return true;
     }
 
     const getBoard = () => board;
@@ -64,8 +65,8 @@ const gameController = (() => {
 
 
     const startGame = () => {
+        numMoves = 0;
         ongoing = true;
-        console.log('ongoing');
         Gameboard.setBoard();
         Gameboard.printBoard();
     }
@@ -78,6 +79,7 @@ const gameController = (() => {
             if (row[0] != '_' && row[0] === row[1] && row[1] === row[2]) {
                 console.log(`${currentPlayer} won!`);
                 ongoing = false;
+                return;
             }
         }
 
@@ -86,18 +88,22 @@ const gameController = (() => {
             if (board[0][j] != '_' && board[0][j] === board[1][j] && board[1][j] === board[2][j]  ) {
                 console.log(`${currentPlayer} won!`);
                 ongoing = false;
+                return;
             }
         }
 
         // test diagnoals
-        if (board[0][0] != '_' && board[0][0] === board[1, 1] && board[1, 1] === board[2, 2] || board[0][2] === board[1, 1] && board[1, 1] === board[2, 0]) {
+        if ((board[0][0] != '_' && board[0][0] === board[1][1] && board[1][1] === board[2][2]) ||
+            (board[0][2] === board[1][1] && board[1][1] === board[2][0])){
             console.log(`${currentPlayer} won!`);
             ongoing = false;
+            return;
         }
 
         if (numMoves === 9) {
             console.log("It's a draw!");
             ongoing = false;
+            return;
         }
     }
 
@@ -106,13 +112,21 @@ const gameController = (() => {
     }
 
     const getMove = () => {
-        const move = prompt(`${currentPlayer}, enter your move(use 2 digits to signify the location on the board):`);
-        return move;
+
+        while(true){
+            const move = prompt(`${currentPlayer.getPlayerName()}, enter your move(use 2 digits to signify the location on the board):`);
+            if(Gameboard.handleMove(move, currentPlayer)){
+                break;
+            } else{
+                console.log('Choose an empty cell');
+                continue;
+            }
+        }
     }
+
 
     const playRound = () => {
         const move = getMove();
-        Gameboard.handleMove(move, currentPlayer);
         Gameboard.printBoard();
         numMoves++;
         testWin();
