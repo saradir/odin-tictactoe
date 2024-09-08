@@ -3,6 +3,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 10px;
 }
 
 #name-display{
@@ -13,10 +14,27 @@
 
 #board{
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    grid-template-rows: 1fr 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3,1fr);
+    grid-auto-flow: row;
     min-height: 300px;
-    width: 300px;
+    min-width: 300px;
     gap: 10px;
     background-color: black;
+    color: wheat;
+}
+
+.cell{
+    min-width: 80px;
+    min-height: 100px;
+    background-color: white;
+}
+
+.cell img{
+    height: 90%;
+    width: auto;
+}
+
+.player[data-current="true"]{
+    border: 1px solid green;
 }

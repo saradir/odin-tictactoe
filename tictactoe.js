@@ -7,7 +7,7 @@ function createPlayer(playerName, playerToken) {
     const token = playerToken;
     const getPlayerName = () => playerName;
     const getToken = () => token;
-    const setPlayerName = (playerName) => this.playerName = playerName;
+    const setPlayerName = (playerName) => name = playerName;
 
     return { getPlayerName, getToken, setPlayerName };
 }
@@ -20,7 +20,7 @@ const Gameboard = (() => {
         for (let i = 0; i < 3; i++) {
             board[i] = [];
             for (let j = 0; j < 3; j++) {
-                board[i][j] = '_';
+                board[i][j] = '';
             }
         }
     }
@@ -36,9 +36,8 @@ const Gameboard = (() => {
 
     const handleMove = (move, player) => {
         move = move.split('');
-
         // check if move is legal
-        if (board[move[0]][move[1]] != '_') {
+        if (board[move[0]][move[1]] != '') {
             return false;
         }
         board[move[0]][move[1]] = player.getToken();
@@ -61,6 +60,7 @@ const gameController = (() => {
     const board = Gameboard.getBoard();
     let numMoves = 0;
     let ongoing = false; // track game state
+    let result = null;
 
 
 
@@ -72,81 +72,161 @@ const gameController = (() => {
     }
 
     const getCurrentPlayer = () => currentPlayer;
+    const getPlayers = () => [playerOne, playerTwo];
 
     const testWin = () => {
         // test rows
         for (row of board) {
-            if (row[0] != '_' && row[0] === row[1] && row[1] === row[2]) {
-                console.log(`${currentPlayer} won!`);
+            if (row[0] != '' && row[0] === row[1] && row[1] === row[2]) {
+                displayController.displayMessage(`${currentPlayer} won!`);
                 ongoing = false;
-                return;
             }
         }
 
         // test columns
         for (let j = 0; j < 3; j++) {
-            if (board[0][j] != '_' && board[0][j] === board[1][j] && board[1][j] === board[2][j]  ) {
-                console.log(`${currentPlayer} won!`);
+            if (board[0][j] != '' && board[0][j] === board[1][j] && board[1][j] === board[2][j]) {
+                displayController.displayMessage(`${currentPlayer} won!`);
                 ongoing = false;
-                return;
             }
         }
 
         // test diagnoals
-        if ((board[0][0] != '_' && board[0][0] === board[1][1] && board[1][1] === board[2][2]) ||
-            (board[0][2] === board[1][1] && board[1][1] === board[2][0])){
-            console.log(`${currentPlayer} won!`);
+        if ((board[0][0] != '' && board[0][0] === board[1][1] && board[1][1] === board[2][2]) ||
+            (board[0][2] != '' &&  board[0][2]=== board[1][1] && board[1][1] === board[2][0])) {
+            
+            displayController.displayMessage(`${currentPlayer} won!`);
             ongoing = false;
-            return;
         }
 
         if (numMoves === 9) {
-            console.log("It's a draw!");
+            displayController.displayMessage("It's a draw!");
             ongoing = false;
-            return;
         }
     }
 
     const switchPlayer = () => {
         currentPlayer = (currentPlayer === playerOne ? playerTwo : playerOne);
+        displayController.toggleCurrentPlayer();
     }
 
+    /* ONLY RELEVANT FOR CONSOLE VERSION
     const getMove = () => {
 
-        while(true){
+        while (true) {
             const move = prompt(`${currentPlayer.getPlayerName()}, enter your move(use 2 digits to signify the location on the board):`);
-            if(Gameboard.handleMove(move, currentPlayer)){
+            if (Gameboard.handleMove(move, currentPlayer)) {
                 break;
-            } else{
+            } else {
                 console.log('Choose an empty cell');
                 continue;
             }
         }
     }
+    */
 
 
-    const playRound = () => {
-        const move = getMove();
-        Gameboard.printBoard();
-        numMoves++;
-        testWin();
-        switchPlayer();
+    const playRound = (cell) => {
+        console.log(cell);
+        //const move = getMove(); ONLY RELEVANT FOR CONSOLE VERSION
+        if(Gameboard.handleMove(cell, currentPlayer)){
+            displayController.displayBoard(Gameboard.getBoard());
+            numMoves++;
+            testWin();
+            switchPlayer();
+            displayController.toggleCurrentPlayer();
+        }else{
+            displayController.displayMessage('Choose an empty cell')
+        }
+
     }
 
     const isOngoing = () => ongoing;
 
-    return { playRound, startGame, isOngoing };
+    return {playRound, startGame, isOngoing, getPlayers};
+})();
+
+const displayController = (() => {
+
+
+    const boardElement = document.querySelector('#board');
+    const displayBoard = (board) => {
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                const cellElement = document.querySelector(`.cell[data-index="${i}${j}"]`);
+                if(board[i][j]){
+                    const mark = board[i][j] === 'X' ? 'X' : 'O';
+                    cellElement.innerHTML = `<img src="icons/${mark}.svg">`
+                }
+            }
+
+        }
+    }
+
+    const displayPlayerName = (playerNum) => {
+        const playerElement = document.querySelector(`".player#${playerNum}`);
+        const playerName = gameController.getPlayers[playerNum - 1].getPlayerName();
+
+        playerElement.textContent = playerName;
+    }
+
+    const toggleCurrentPlayer = () => {
+        const currentPlayerElement = document.querySelector(".player[data-current=true");
+        const newCurrentPlayer = document.querySelector(".player[data-current=false");
+
+        currentPlayerElement.dataset.current = "false";
+        newCurrentPlayer.dataset.current = "true";
+    }
+
+    // used to display various messages on the message display.
+
+    const displayMessage = (message) => {
+
+        const messageElement = document.querySelector("#message-display");
+        messageElement.textContent = message;
+    }
+
+
+
+    return {
+        displayBoard,
+        displayPlayerName,
+        toggleCurrentPlayer,
+        displayMessage
+    };
 })();
 
 
+const clickHandler = (() =>{
+    const container = document.querySelector("#container");
+
+    container.addEventListener("click", (e)=>{
+
+        if(e.target.classList.contains("cell") && gameController.isOngoing()){
+            console.log(`${e.target.dataset.index}`);
+            gameController.playRound(e.target.dataset.index);
+        } 
+        //to do...
+    })
+})();
+
+gameController.startGame();
+/*
 function mainLoop() {
 
     gameController.startGame();
 
     while (gameController.isOngoing()) {
-        gameController.playRound();
+        const played = gameController.playRound();
+        if(!played){
+            displayController.displayMessage('cellError');
+            continue;
+        }
+        displayController.displayBoard();
+        displayController.toggleCurrentPlayer();
     }
+    displayController.displayMessage('result');
 
 }
 
-mainLoop();
+mainLoop(); */
