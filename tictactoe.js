@@ -2,14 +2,15 @@
 
 
 // token will be either 'O' or 'X'.
-function createPlayer(playerName, playerToken) {
-    const name = playerName;
-    const token = playerToken;
-    const getPlayerName = () => playerName;
+function createPlayer(playerName, id) {
+    let name = playerName;
+    const token = id === '1'? 'X': '0';
+    const getPlayerName = () => name;
     const getToken = () => token;
     const setPlayerName = (playerName) => name = playerName;
+    const getID = () => id;
 
-    return { getPlayerName, getToken, setPlayerName };
+    return { getPlayerName, getToken, setPlayerName, getID };
 }
 
 const Gameboard = (() => {
@@ -25,14 +26,14 @@ const Gameboard = (() => {
         }
     }
 
-    // for console mode
+    /* for console mode
     const printBoard = () => {
         console.log('######');
         for (row of board) {
             console.log(row.join('|'));
         }
         console.log('######');
-    }
+    }*/
 
     const handleMove = (move, player) => {
         move = move.split('');
@@ -48,27 +49,28 @@ const Gameboard = (() => {
 
 
 
-    return { getBoard, handleMove, printBoard, setBoard };
+    return { getBoard, handleMove, setBoard };
 })();
 
 
 const gameController = (() => {
 
-    const playerOne = createPlayer('playerOne', 'X');
-    const playerTwo = createPlayer('playerTwo', 'O');
+    const playerOne = createPlayer('playerOne', '1');
+    const playerTwo = createPlayer('playerTwo', '2');
     let currentPlayer = playerOne;
-    const board = Gameboard.getBoard();
     let numMoves = 0;
     let ongoing = false; // track game state
-    let result = null;
-
-
+    const board = Gameboard.getBoard();
 
     const startGame = () => {
         numMoves = 0;
         ongoing = true;
         Gameboard.setBoard();
-        Gameboard.printBoard();
+        currentPlayer = playerOne;
+        displayController.displayCurrentPlayer(currentPlayer.getID());
+        displayController.displayBoard(board);
+        displayController.displayMessage('');
+
     }
 
     const getCurrentPlayer = () => currentPlayer;
@@ -78,16 +80,18 @@ const gameController = (() => {
         // test rows
         for (row of board) {
             if (row[0] != '' && row[0] === row[1] && row[1] === row[2]) {
-                displayController.displayMessage(`${currentPlayer} won!`);
+                displayController.displayMessage(`${currentPlayer.getPlayerName()} won!`);
                 ongoing = false;
+                return;
             }
         }
 
         // test columns
         for (let j = 0; j < 3; j++) {
             if (board[0][j] != '' && board[0][j] === board[1][j] && board[1][j] === board[2][j]) {
-                displayController.displayMessage(`${currentPlayer} won!`);
+                displayController.displayMessage(`${currentPlayer.getPlayerName()} won!`);
                 ongoing = false;
+                return;
             }
         }
 
@@ -95,19 +99,21 @@ const gameController = (() => {
         if ((board[0][0] != '' && board[0][0] === board[1][1] && board[1][1] === board[2][2]) ||
             (board[0][2] != '' &&  board[0][2]=== board[1][1] && board[1][1] === board[2][0])) {
             
-            displayController.displayMessage(`${currentPlayer} won!`);
+            displayController.displayMessage(`${currentPlayer.getPlayerName()} won!`);
             ongoing = false;
+            return;
         }
 
-        if (numMoves === 9) {
+        else if (numMoves === 9) {
             displayController.displayMessage("It's a draw!");
             ongoing = false;
+            return;
         }
     }
 
     const switchPlayer = () => {
         currentPlayer = (currentPlayer === playerOne ? playerTwo : playerOne);
-        displayController.toggleCurrentPlayer();
+        displayController.displayCurrentPlayer(currentPlayer.getID());
     }
 
     /* ONLY RELEVANT FOR CONSOLE VERSION
@@ -127,16 +133,14 @@ const gameController = (() => {
 
 
     const playRound = (cell) => {
-        console.log(cell);
         //const move = getMove(); ONLY RELEVANT FOR CONSOLE VERSION
         if(Gameboard.handleMove(cell, currentPlayer)){
             displayController.displayBoard(Gameboard.getBoard());
             numMoves++;
             testWin();
             switchPlayer();
-            displayController.toggleCurrentPlayer();
         }else{
-            displayController.displayMessage('Choose an empty cell')
+            displayController.displayMessage('Choose an empty cell');
         }
 
     }
@@ -156,30 +160,31 @@ const displayController = (() => {
                 const cellElement = document.querySelector(`.cell[data-index="${i}${j}"]`);
                 if(board[i][j]){
                     const mark = board[i][j] === 'X' ? 'X' : 'O';
-                    cellElement.innerHTML = `<img src="icons/${mark}.svg">`
-                }
+                    cellElement.innerHTML = `<img src="icons/${mark}.svg">`;
+                }else {cellElement.innerHTML = '';}
             }
 
         }
     }
 
-    const displayPlayerName = (playerNum) => {
-        const playerElement = document.querySelector(`".player#${playerNum}`);
-        const playerName = gameController.getPlayers[playerNum - 1].getPlayerName();
+    const displayPlayerName = (playerID, name) => {
+        const playerElement = document.getElementById(playerID);
 
-        playerElement.textContent = playerName;
+        playerElement.textContent = name;
     }
 
-    const toggleCurrentPlayer = () => {
-        const currentPlayerElement = document.querySelector(".player[data-current=true");
-        const newCurrentPlayer = document.querySelector(".player[data-current=false");
-
-        currentPlayerElement.dataset.current = "false";
-        newCurrentPlayer.dataset.current = "true";
+    // display current player
+    const displayCurrentPlayer = (playerID) => {
+        const playerElements = document.querySelectorAll(".player");
+        // reset current status
+        for(player of playerElements){
+            player.dataset.current ='';
+        }
+        const currentPlayerElement = document.getElementById(playerID);
+        currentPlayerElement.dataset.current = "true";
     }
 
     // used to display various messages on the message display.
-
     const displayMessage = (message) => {
 
         const messageElement = document.querySelector("#message-display");
@@ -191,7 +196,7 @@ const displayController = (() => {
     return {
         displayBoard,
         displayPlayerName,
-        toggleCurrentPlayer,
+        displayCurrentPlayer: displayCurrentPlayer,
         displayMessage
     };
 })();
@@ -203,10 +208,20 @@ const clickHandler = (() =>{
     container.addEventListener("click", (e)=>{
 
         if(e.target.classList.contains("cell") && gameController.isOngoing()){
-            console.log(`${e.target.dataset.index}`);
             gameController.playRound(e.target.dataset.index);
         } 
-        //to do...
+
+        if(e.target.id === "new-game"){
+            gameController.startGame();
+        }
+
+        if(e.target.classList.contains("player")){
+            const name = prompt(`Enter player ${e.target.id} name:`);
+            const player = gameController.getPlayers()[Number(e.target.id)-1];  
+            player.setPlayerName(name);
+            displayController.displayPlayerName(e.target.id, name);
+        }
+        
     })
 })();
 
@@ -223,7 +238,7 @@ function mainLoop() {
             continue;
         }
         displayController.displayBoard();
-        displayController.toggleCurrentPlayer();
+        displayController.displayCurrentPlayer();
     }
     displayController.displayMessage('result');
 
